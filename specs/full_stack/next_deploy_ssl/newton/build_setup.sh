@@ -1,1 +1,0 @@
-../../../../helper/build/build_setup.sh

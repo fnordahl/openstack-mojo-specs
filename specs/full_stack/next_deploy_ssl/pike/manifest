@@ -2,7 +2,6 @@
 collect config=collect-next-${MOJO_SERIES}
 
 # Prepare artefacts required by the bundle
-build config=build_setup.sh
 build config=generate_certs.py
 
 # Use juju deployer with full.yaml bundle
