@@ -400,7 +400,7 @@ def get_auth_url(juju_status=None):
 def get_overcloud_auth(juju_status=None):
     if not juju_status:
         juju_status = get_juju_status()
-    if juju_get('keystone', 'use-https').lower() == 'yes':
+    if juju_get('keystone', 'ssl_cert') is not None:
         transport = 'https'
         port = 35357
     else:
