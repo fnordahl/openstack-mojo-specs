@@ -13,29 +13,44 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import ipaddress
+import itertools
 import os
-import sys
-sys.path.append(os.path.join(os.environ.get('MOJO_BUILD_DIR'), 'zaza'))
-import zaza.utilities.cert # noqa
-
-
-def write_cert(path, name, data):
-    with os.fdopen(os.open(os.path.join(CERT_DIR, name),
-                           os.O_WRONLY | os.O_CREAT, 0o600), 'wb') as f:
-        f.write(data)
+import zaza.utilities.cert
 
 
 ISSUER_NAME = 'OSCI'
-IP_PREFIX = '.'.join(os.environ.get('MOJO_GATEWAY').split('.')[:2])
 CERT_DIR = os.environ.get('MOJO_LOCAL_DIR')
 
-alt_names = []
+
+def write_cert(path, filename, data, mode=0o600):
+    """
+    Helper function for writing certificate data to disk.
+
+    :param path: Directory file should be put in
+    :type path: str
+    :param filename: Name of file
+    :type filename: str
+    :param data: Data to write
+    :type data: any
+    :param mode: Create mode (permissions) of file
+    :type mode: Octal(int)
+    """
+    with os.fdopen(os.open(os.path.join(path, filename),
+                           os.O_WRONLY | os.O_CREAT, mode), 'wb') as f:
+        f.write(data)
+
+
 # We need to restrain the number of SubjectAlternativeNames we attempt to put
 # in the certificate.  There is a hard limit for what length the sum of all
 # extensions in the certificate can have.
-for c in range(0, 11 + 1):
-    for d in range(0, 256):
-        alt_names.append('{}.{}.{}'.format(IP_PREFIX, c, d))
+#
+# - 2^11 ought to be enough for anybody
+alt_names = []
+for addr in itertools.islice(
+        ipaddress.IPv4Network(os.environ.get('CIDR_EXT')), 2**11):
+
+    alt_names.append(str(addr))
 
 (cakey, cacert) = zaza.utilities.cert.generate_cert(ISSUER_NAME,
                                                     generate_ca=True)
