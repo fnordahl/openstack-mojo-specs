@@ -85,6 +85,15 @@ UPGRADE_SERVICES = [
 
 
 # Openstack Client helpers
+def get_cacert():
+    try:
+        cacert = os.path.join(os.environ.get('MOJO_LOCAL_DIR'), 'cacert.pem')
+        os.stat(cacert)
+    except FileNotFoundError:
+        cacert = None
+    return cacert
+
+
 def get_nova_creds(cloud_creds):
     auth = get_ks_creds(cloud_creds)
     if cloud_creds.get('OS_PROJECT_ID'):
@@ -133,9 +142,8 @@ def get_swift_creds(cloud_creds):
     return auth
 
 
-def get_nova_client(novarc_creds, insecure=True):
+def get_nova_client(novarc_creds):
     nova_creds = get_nova_creds(novarc_creds)
-    nova_creds['insecure'] = insecure
     nova_creds['version'] = 2
     return novaclient_client.Client(**nova_creds)
 
@@ -144,9 +152,8 @@ def get_nova_session_client(session):
     return novaclient_client.Client(2, session=session)
 
 
-def get_neutron_client(novarc_creds, insecure=True):
+def get_neutron_client(novarc_creds):
     neutron_creds = get_ks_creds(novarc_creds)
-    neutron_creds['insecure'] = insecure
     return neutronclient.Client(**neutron_creds)
 
 
@@ -158,37 +165,36 @@ def get_aodh_session_client(session):
     return aodh_client.Client(session=session)
 
 
-def get_keystone_session(novarc_creds, insecure=True, scope='PROJECT'):
+def get_keystone_session(novarc_creds, scope='PROJECT'):
     keystone_creds = get_ks_creds(novarc_creds, scope=scope)
     if novarc_creds.get('API_VERSION', 2) == 2:
         auth = v2.Password(**keystone_creds)
     else:
         auth = v3.Password(**keystone_creds)
-    return session.Session(auth=auth, verify=not insecure)
+    return session.Session(auth=auth, verify=get_cacert())
 
 
 def get_keystone_session_client(session):
     return keystoneclient_v3.Client(session=session)
 
 
-def get_keystone_client(novarc_creds, insecure=True):
+def get_keystone_client(novarc_creds):
     keystone_creds = get_ks_creds(novarc_creds)
     if novarc_creds.get('API_VERSION', 2) == 2:
         auth = v2.Password(**keystone_creds)
-        sess = session.Session(auth=auth, verify=True)
+        sess = session.Session(auth=auth, verify=get_cacert())
         client = keystoneclient_v2.Client(session=sess)
     else:
         auth = v3.Password(**keystone_creds)
-        sess = get_keystone_session(novarc_creds, insecure)
+        sess = get_keystone_session(novarc_creds)
         client = keystoneclient_v3.Client(session=sess)
     # This populates the client.service_catalog
     client.auth_ref = auth.get_access(sess)
     return client
 
 
-def get_swift_client(novarc_creds, insecure=True):
+def get_swift_client(novarc_creds):
     swift_creds = get_swift_creds(novarc_creds)
-    swift_creds['insecure'] = insecure
     return swiftclient.client.Connection(**swift_creds)
 
 
@@ -215,7 +221,7 @@ def get_glance_session_client(session):
     return glanceclient.Client('1', session=session)
 
 
-def get_glance_client(novarc_creds, insecure=True):
+def get_glance_client(novarc_creds):
     if novarc_creds.get('API_VERSION', 2) == 2:
         kc = get_keystone_client(novarc_creds)
         glance_ep_url = kc.service_catalog.url_for(service_type='image',
@@ -226,8 +232,7 @@ def get_glance_client(novarc_creds, insecure=True):
         glance_svc_id = kc.services.find(name='glance').id
         ep = kc.endpoints.find(service_id=glance_svc_id, interface='public')
         glance_ep_url = ep.url
-    return glanceclient.Client('1', glance_ep_url, token=kc.auth_token,
-                               insecure=insecure)
+    return glanceclient.Client('1', glance_ep_url, token=kc.auth_token)
 
 
 # Glance Helpers
