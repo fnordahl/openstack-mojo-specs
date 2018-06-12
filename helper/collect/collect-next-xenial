@@ -7,7 +7,7 @@ cinder-ceph            cs:~openstack-charmers-next/cinder-ceph
 cinder                 cs:~openstack-charmers-next/cinder
 glance                 cs:~openstack-charmers-next/glance
 heat                   cs:~openstack-charmers-next/heat
-keystone               cs:~openstack-charmers-next/keystone
+keystone               cs:~fnordahl/feature-keystone-remove-cert-management
 mongodb                cs:~thedac/mongodb
 mysql                  cs:~openstack-charmers-next/percona-cluster
 neutron-api            cs:~openstack-charmers-next/neutron-api
